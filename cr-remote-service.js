@@ -9,7 +9,7 @@ angular.module('corley.remote-service', [])
         endpoint: "default",
         endpointBuilder: "default",
         resourceEndpoint: "",
-        methods: ["get", "list", "post", "delete"],
+        methods: ["get", "post", "delete"],
         headers: {},
         authType: false,
         cache: false,
@@ -37,7 +37,6 @@ angular.module('corley.remote-service', [])
     
     //get method, make a $http.get request
     this.get = function(options) {
-        console.log("options", options);
         //check if method is available
         if(this._checkMethod("get")) {
             //create local config rewriting resource config with options
@@ -46,15 +45,72 @@ angular.module('corley.remote-service', [])
             options = this.authorizeRequest(options);
             
             var deferred = $q.defer();
-            console.log(options);
             var builder = $crRemoteService.getEndpointBuilder(options.endpointBuilder);
             var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id);
             
             var httpConfig = {"params": options.params, "headers": options.headers};
-            console.log("httpconfig", httpConfig);
             
             
             $http.get(url, httpConfig).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data) {
+                deferred.reject(data);
+            });
+            if(options.success && options.error) {
+                deferred.promise.then(options.success, options.error);
+            }
+        }
+    };
+    
+    //post method, make a $http.post request
+    this.post = function(options) {
+        //check if method is available
+        if(this._checkMethod("post")) {
+            //create local config rewriting resource config with options
+            
+            var data = options.data;
+            
+            options = this.getMergedConfig(options);
+            //authorize the request
+            options = this.authorizeRequest(options);
+            
+            var deferred = $q.defer();
+            var builder = $crRemoteService.getEndpointBuilder(options.endpointBuilder);
+            var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id);
+            
+            var httpConfig = {"params": options.params, "headers": options.headers};
+            
+            
+            $http.post(url, data, httpConfig).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data) {
+                deferred.reject(data);
+            });
+            if(options.success && options.error) {
+                deferred.promise.then(options.success, options.error);
+            }
+        }
+    };
+    
+    
+    //delete method, make a $http.delete request
+    this.delete = function(options) {
+        //check if method is available
+        if(this._checkMethod("delete")) {
+
+            //create local config rewriting resource config with options
+            options = this.getMergedConfig(options);
+            //authorize the request
+            options = this.authorizeRequest(options);
+            
+            var deferred = $q.defer();
+            var builder = $crRemoteService.getEndpointBuilder(options.endpointBuilder);
+            var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id);
+            
+            var httpConfig = {"params": options.params, "headers": options.headers};
+            
+            
+            $http.delete(url, httpConfig).success(function(data) {
                 deferred.resolve(data);
             }).error(function(data) {
                 deferred.reject(data);
@@ -69,7 +125,6 @@ angular.module('corley.remote-service', [])
     this.authorizeRequest = function(request) {
        var handler = $crRemoteService.getAuthHandler(request.authType);
        if(handler) {
-           console.log("auth handler yes!");
            return handler.getSign(request);
        }  
        else {
@@ -115,12 +170,10 @@ angular.module('corley.remote-service', [])
         }
         else {
             return function(endpoint, resourceName, resourceId, params) {
-                console.log("AAsisisisi", resourceName)
                 if(resourceName) {
                     endpoint += resourceName;
                 }
                 if(resourceId) {
-                    console.log("sisisisi", resourceId)
                     endpoint += "/" + resourceId;
                 }
                 if(params) {
