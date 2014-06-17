@@ -1,20 +1,20 @@
-angular.module('corley.remote-service', [])
+angular.module('cr.remote-service', [])
 .service('crRemoteService', function($q, $http, $crRemoteService) {
     
     //basic configuration
     this._config = {
-        id: false,
-        params: false,
-        resourceName: "",
-        endpoint: "default",
-        endpointBuilder: "default",
-        resourceEndpoint: "",
-        methods: ["get", "post", "delete"],
-        headers: {},
+        id: false, //id for get, delete, post calls
+        params: false, //added as ?...
+        resourceName: "", // radix (endpoint + resourceName)
+        endpoint: "default", // name of endpoint set in app.config
+        //endpointBuilder: "default",
+        resourceEndpoint: "", // TODO
+        methods: ["get", "post", "delete", "list"], //TODO
+        headers: {}, 
         authType: false,
-        cache: false,
-        success: function(data) { return data},
-        error: function(data) {return false;}
+        cache: false, //true or fals
+        success: function(data) {}, //callback
+        error: function(data) {} //callback
     };
     
     
@@ -25,6 +25,8 @@ angular.module('corley.remote-service', [])
                 this._config.iii = options[iii];
             }
         }
+        
+        
         //TODO check se cambiare
         this._config.resourceName = resourceName;
         return this;
@@ -35,10 +37,9 @@ angular.module('corley.remote-service', [])
         return (this._config.methods.indexOf(methodName) != -1);
     };
     
-    //get method, make a $http.get request
-    this.get = function(options) {
-        //check if method is available
-        if(this._checkMethod("get")) {
+    
+    this._call = function(httpMethod, options) {
+        if(this._checkMethod(httpMethod)) {
             //create local config rewriting resource config with options
             options = this.getMergedConfig(options);
             //authorize the request
@@ -62,6 +63,40 @@ angular.module('corley.remote-service', [])
         }
     };
     
+    this.list = function(options) {
+        if(options && options.id) {
+            options.id = false;
+        }
+        this.get(options);
+       
+    };
+    
+    //get method, make a $http.get request
+    this.get = function(options) {
+        //check if method is available
+        if(this._checkMethod("get")) {
+            //create local config rewriting resource config with options
+            options = this.getMergedConfig(options);
+            //authorize the request
+            options = this.authorizeRequest(options);
+            
+            var deferred = $q.defer();
+            var builder = $crRemoteService.getEndpointBuilder(options.endpointBuilder);
+            var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id);
+            
+            var httpConfig = {"params": options.params, "headers": options.headers};
+            
+            $http.get(url, httpConfig).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data) {
+                deferred.reject(data);
+            });
+//            if(options.success && options.error) {
+                deferred.promise.then(options.success, options.error);
+//            }
+        }
+    };
+    
     //post method, make a $http.post request
     this.post = function(options) {
         //check if method is available
@@ -80,15 +115,14 @@ angular.module('corley.remote-service', [])
             
             var httpConfig = {"params": options.params, "headers": options.headers};
             
-            
             $http.post(url, data, httpConfig).success(function(data) {
                 deferred.resolve(data);
             }).error(function(data) {
                 deferred.reject(data);
             });
-            if(options.success && options.error) {
+//            if(options.success && options.error) {
                 deferred.promise.then(options.success, options.error);
-            }
+//            }
         }
     };
     
@@ -115,9 +149,9 @@ angular.module('corley.remote-service', [])
             }).error(function(data) {
                 deferred.reject(data);
             });
-            if(options.success && options.error) {
+//            if(options.success && options.error) {
                 deferred.promise.then(options.success, options.error);
-            }
+//            }
         }
     };
     
