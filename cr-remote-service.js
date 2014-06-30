@@ -166,9 +166,19 @@ angular.module('cr.remote-service', [])
        }
     };
     
+    
+
+    this.getConfig = function() {
+    	var results = {};
+    	for(var iii in this._config) {
+    		results[iii] = this._config[iii];
+    	}
+    	return results;
+    };
+    
     //return options (rewriting default options with the parameters)
     this.getMergedConfig = function(options) {
-        var results = this._config;
+        var results = this.getConfig();
         for(var iii in options) {
             if(results[iii] !== null) {
                 results[iii] = options[iii];
