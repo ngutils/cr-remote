@@ -1,5 +1,5 @@
 angular.module('cr.remote-service', [])
-.service('crRemoteService', function($q, $http, $crRemoteService) {
+.service('crRemoteService', ['$q', '$http', '$crRemoteService', function($q, $http, $crRemoteService) {
     
     //basic configuration
     this._config = {
@@ -7,8 +7,8 @@ angular.module('cr.remote-service', [])
         params: false, //added as ?...
         resourceName: "", // radix (endpoint + resourceName)
         endpoint: "default", // name of endpoint set in app.config
-        //endpointBuilder: "default",
-        resourceEndpoint: "", // TODO
+        endpointBuilder: "default",
+        //resourceEndpoint: "", // TODO
         methods: ["get", "post", "delete", "list"], //TODO
         headers: {}, 
         authType: false,
@@ -21,10 +21,10 @@ angular.module('cr.remote-service', [])
     //build the service
     this.build = function(resourceName, options) {
         for(var iii in options) {
-            if(this._config.iii) {
-                this._config.iii = options[iii];
+            if(this._config[iii]) {
+                this._config[iii] = options[iii];
             }
-        }
+        }         
         
         
         //TODO check se cambiare
@@ -47,7 +47,7 @@ angular.module('cr.remote-service', [])
             
             var deferred = $q.defer();
             var builder = $crRemoteService.getEndpointBuilder(options.endpointBuilder);
-            var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id);
+            var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id/*, options.params*/);
             
             var httpConfig = {"params": options.params, "headers": options.headers};
             
@@ -82,8 +82,7 @@ angular.module('cr.remote-service', [])
             
             var deferred = $q.defer();
             var builder = $crRemoteService.getEndpointBuilder(options.endpointBuilder);
-            var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id);
-            
+            var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id/*, options.params*/);
             var httpConfig = {"params": options.params, "headers": options.headers};
             
             $http.get(url, httpConfig).success(function(data) {
@@ -111,7 +110,7 @@ angular.module('cr.remote-service', [])
             
             var deferred = $q.defer();
             var builder = $crRemoteService.getEndpointBuilder(options.endpointBuilder);
-            var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id);
+            var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id/**, options.params*/);
             
             var httpConfig = {"params": options.params, "headers": options.headers};
             
@@ -139,7 +138,7 @@ angular.module('cr.remote-service', [])
             
             var deferred = $q.defer();
             var builder = $crRemoteService.getEndpointBuilder(options.endpointBuilder);
-            var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id);
+            var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id/*, options.params*/);
             
             var httpConfig = {"params": options.params, "headers": options.headers};
             
@@ -187,7 +186,7 @@ angular.module('cr.remote-service', [])
         return results;
     };
     
-})
+}])
 
 .provider('$crRemoteService', function() {
     var _config = {
@@ -202,17 +201,35 @@ angular.module('cr.remote-service', [])
         if(!buildType) {
             buildType = "default";
         }
-        _config.endpointBuilder.buildType = buildFunction;
+        _config.endpointBuilder[buildType] = buildFunction;
+    };
+    
+    this.parseParams = function(obj, prefix, recursive) {
+        var str = [];
+        for(var p in obj) {
+          var k = prefix ? prefix + "[" + p + "]" : p, v = obj[p];
+          if(typeof v == "array") {
+            for(var iii in v) str.push(iii + "=" + v[iii]);
+          }
+          else {
+            str.push(typeof v == "object" ?
+            recursive(v, k, recursive) :
+            //k + "=" + v);
+            encodeURIComponent(k) + "=" + encodeURIComponent(v));
+          }
+        }
+        return str.join("&");
     };
 
     this.getEndpointBuilder = function(endpointBuilderType) {
         if(!endpointBuilderType) {
             endpointBuilderType = "default";
         }
-        if(_config.endpoint[endpointBuilderType]) {
-            return _config.endpoint.endpointBuilderType;
+        if(_config.endpointBuilder[endpointBuilderType]) {
+            return _config.endpointBuilder[endpointBuilderType];
         }
         else {
+          var parseParams = this.parseParams;
             return function(endpoint, resourceName, resourceId, params) {
                 if(resourceName) {
                     endpoint += resourceName;
@@ -221,13 +238,14 @@ angular.module('cr.remote-service', [])
                     endpoint += "/" + resourceId;
                 }
                 if(params) {
-                    var paramsAr = [];
+                    endpoint += "?" + parseParams(params, null, parseParams);
+                    /**var paramsAr = [];
                     for(var iii in params) {
                         paramsAr.push(iii + "=" + params[iii]);
                     }
                     if(paramsAr.length) {
                         endpoint += "?" + paramsAr.join("&");
-                    }
+                    }  */
                 }
                 return endpoint;
             } ;
@@ -238,15 +256,15 @@ angular.module('cr.remote-service', [])
         if(!endpointType) {
             endpointType = "default";
         }
-        _config.endpoint.endpointType = endpoint;
+        _config.endpoint[endpointType] = endpoint;
     };
     
     this.getEndpoint = function(endpointType) {
         if(!endpointType) {
             endpointType = "default";
         }
-        if(_config.endpoint.endpointType) {
-            return _config.endpoint.endpointType;
+        if(_config.endpoint[endpointType]) {
+            return _config.endpoint[endpointType];
         }
         else {
             return "" ;
