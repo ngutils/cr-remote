@@ -276,7 +276,7 @@ angular.module('cr.remote-service', [])
         if(!authType) {
             authType = "default";
         }
-        _config.authHandlers.authType = authHandler;
+        _config.authHandlers[authType] = authHandler;
     };
 
     
@@ -284,8 +284,8 @@ angular.module('cr.remote-service', [])
         if(!authType) {
             authType = "default";
         }
-        if(_config.authHandlers.authType) {
-            return _config.authHandlers.authType;
+        if(_config.authHandlers[authType]) {
+            return _config.authHandlers[authType];
         }
         else {
             return false;
