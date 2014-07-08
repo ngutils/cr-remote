@@ -9,7 +9,7 @@ angular.module('cr.remote-service', [])
         endpoint: "default", // name of endpoint set in app.config
         endpointBuilder: "default",
         //resourceEndpoint: "", // TODO
-        methods: ["get", "post", "delete", "list"], //TODO
+        methods: ["get", "post", "put", "delete", "list"], //TODO
         headers: {}, 
         authType: false,
         cache: false, //true or fals
@@ -120,6 +120,34 @@ angular.module('cr.remote-service', [])
                 deferred.reject(data);
             });
 //            if(options.success && options.error) {
+            deferred.promise.then(options.success, options.error);
+//            }
+        }
+    };
+    //put method, make a $http.post request
+    this.put = function(options) {
+        //check if method is available
+        if(this._checkMethod("put")) {
+            //create local config rewriting resource config with options
+            
+            var data = options.data;
+            
+            options = this.getMergedConfig(options);
+            //authorize the request
+            options = this.authorizeRequest(options);
+            
+            var deferred = $q.defer();
+            var builder = $crRemoteService.getEndpointBuilder(options.endpointBuilder);
+            var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id/**, options.params*/);
+            
+            var httpConfig = {"params": options.params, "headers": options.headers};
+            
+            $http.put(url, data, httpConfig).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data) {
+                deferred.reject(data);
+            });
+//            if(options.success && options.error) {
                 deferred.promise.then(options.success, options.error);
 //            }
         }
@@ -194,7 +222,7 @@ angular.module('cr.remote-service', [])
         "endpoint": {},
         //come gestire una risorsa del tipo user/11/posts/12 ?
         "endpointBuilder": {},
-        "methods": ["get", "list", "post", "delete"]
+        "methods": ["get", "list", "post",  "put", "delete"]
     };
     
     this.setEndpointBuilder = function(buildFunction, buildType) {
