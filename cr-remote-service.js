@@ -155,7 +155,7 @@ angular.module('cr.remote-service', [])
     
     
     //delete method, make a $http.delete request
-    this.delete = function(options) {
+    this.del = function(options) {
         //check if method is available
         if(this._checkMethod("delete")) {
 
