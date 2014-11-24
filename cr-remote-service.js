@@ -9,10 +9,11 @@ angular.module('cr.remote-service', [])
         endpoint: "default", // name of endpoint set in app.config
         endpointBuilder: "default",
         //resourceEndpoint: "", // TODO
-        methods: ["get", "post", "put", "delete", "list"], //TODO
+        methods: ["get", "post", "put", "delete", "list", "patch"], //TODO
         headers: {}, 
         authType: false,
-        cache: false, //true or fals
+        cache: false, //true or fals,
+        responseInterceptor: function(data) {return data;}, //base response interceptor,
         success: function(data) {}, //callback
         error: function(data) {} //callback
     };
@@ -84,8 +85,10 @@ angular.module('cr.remote-service', [])
             var builder = $crRemoteService.getEndpointBuilder(options.endpointBuilder);
             var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id/*, options.params*/);
             var httpConfig = {"params": options.params, "headers": options.headers};
-            
-            $http.get(url, httpConfig).success(function(data) {
+            $http.get(url, httpConfig).success(function(data, status, headers, config) {
+                if(options.responseInterceptor) {
+                    data = options.responseInterceptor(data, status, headers, config);
+                }
                 deferred.resolve(data);
             }).error(function(data) {
                 deferred.reject(data);
@@ -115,6 +118,32 @@ angular.module('cr.remote-service', [])
             var httpConfig = {"params": options.params, "headers": options.headers};
             
             $http.post(url, data, httpConfig).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data) {
+                deferred.reject(data);
+            });
+//            if(options.success && options.error) {
+            deferred.promise.then(options.success, options.error);
+//            }
+        }
+    };
+    this.patch = function(options) {
+        //check if method is available
+        if(this._checkMethod("patch")) {
+            //create local config rewriting resource config with options
+            
+            var data = options.data;
+            
+            options = this.getMergedConfig(options);
+            //authorize the request
+            options = this.authorizeRequest(options);
+            
+            var deferred = $q.defer();
+            var builder = $crRemoteService.getEndpointBuilder(options.endpointBuilder);
+            var url = builder($crRemoteService.getEndpoint(options.endpoint), options.resourceName, options.id/**, options.params*/);
+            var httpConfig = {"params": options.params, "headers": options.headers};
+            
+            $http.patch(url, data, httpConfig).success(function(data) {
                 deferred.resolve(data);
             }).error(function(data) {
                 deferred.reject(data);
@@ -196,11 +225,11 @@ angular.module('cr.remote-service', [])
     
 
     this.getConfig = function() {
-    	var results = {};
-    	for(var iii in this._config) {
-    		results[iii] = this._config[iii];
-    	}
-    	return results;
+        var results = {};
+        for(var iii in this._config) {
+            results[iii] = this._config[iii];
+        }
+        return results;
     };
     
     //return options (rewriting default options with the parameters)
