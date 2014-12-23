@@ -1,5 +1,6 @@
 {
-    "name": "cr-remote-service",
+    "name": "cr-remote",
+    "version": "0.0.3",
     "devDependencies": {},
     "scripts": {}
 }
