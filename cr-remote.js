@@ -10,7 +10,7 @@ angular.module('cr.remote', [])
         requestInterceptor: "default",
         responseInterceptorSuccess:  "default",
         responseInterceptorError:  "default",
-        
+
         headers: {},
         authHandlers: {},
         authType: false,
@@ -22,7 +22,7 @@ angular.module('cr.remote', [])
         responseInterceptorSuccesss: {},
         responseInterceptorErrors: {}
 	};
-	
+
 	 /**
      * Create service
      * @param options Object init configuration
@@ -36,7 +36,7 @@ angular.module('cr.remote', [])
         service._config.resourceName = resourceName;
         return service;
     };
-    
+
     /**
      * Merge configuration
      * @param options Object your configuration
@@ -64,7 +64,7 @@ angular.module('cr.remote', [])
         options.method = "GET";
         return this._call(options);
     };
-    
+
     /**
      * Post entry point
      * @param options Object Call configuration
@@ -87,13 +87,10 @@ angular.module('cr.remote', [])
     	options = this.getMergedConfig(options);
     	var d = $q.defer();
     	var dynamo = crAws.cognito.getDynamo(options.resourceName);
-    	
+
         if(options.requestInterceptors[options.requestInterceptor]) {
             options = options.requestInterceptors[options.requestInterceptor](options);
         }
-        console.log("sono in dynamo e sto chiamando..", options);
-        
-
         dynamo.then(function(dynamoObj) {
 	        if(options.method == "GET") {
 	        	dynamoObj.get(options.id).then(function(data){
@@ -109,13 +106,7 @@ angular.module('cr.remote', [])
 	            });
 	        }
         });
-        
-//        d.resolve({});
-        
         return d.promise;
-        
-        
-        
     };
     this.getConfig = function() {
         return this._config;
@@ -126,9 +117,6 @@ angular.module('cr.remote', [])
             this._config[ii] = obj[ii];
         }
     };
-    
-	
-	
 }])
 .service('crRemoteCognitoSync', ['crRemote', 'crAws', '$q',  function(crRemote, crAws, $q) {
 	this._config = {
@@ -141,7 +129,7 @@ angular.module('cr.remote', [])
         requestInterceptor: "default",
         responseInterceptorSuccess:  "default",
         responseInterceptorError:  "default",
-        
+
         headers: {},
         authHandlers: {},
         authType: false,
@@ -153,7 +141,7 @@ angular.module('cr.remote', [])
         responseInterceptorSuccesss: {},
         responseInterceptorErrors: {}
 	};
-	
+
     /**
      * Create service
      * @param options Object init configuration
@@ -177,11 +165,11 @@ angular.module('cr.remote', [])
     	options = this.getMergedConfig(options);
     	var d = $q.defer();
     	var sync = crAws.cognito.getSync(options.resourceName);
-    	
+
         if(options.requestInterceptors[options.requestInterceptor]) {
             options = options.requestInterceptors[options.requestInterceptor](options);
         }
-    	
+
     	sync.then(function(syncObj) {
 	        if(options.method == "GET") {
 	        	syncObj.get(options.id).then(function(data){
@@ -223,10 +211,10 @@ angular.module('cr.remote', [])
 	            });
 	        }
     	});
-    	
+
         return d.promise;
     };
-    
+
 
     /**
      * Merge configuration
@@ -255,7 +243,7 @@ angular.module('cr.remote', [])
         options.method = "GET";
         return this._call(options);
     };
-   
+
 
     /**
      * Delete entry point
@@ -318,8 +306,6 @@ angular.module('cr.remote', [])
             this._config[ii] = obj[ii];
         }
     };
-    
-    
 }])
 .service('crRemoteHttp', ['crRemote', '$http', '$q', function(crRemote, $http, $q) {
     /**
@@ -335,14 +321,11 @@ angular.module('cr.remote', [])
         requestInterceptor: "default",
         responseInterceptorSuccess:  "default",
         responseInterceptorError:  "default",
-        
+
         headers: {},
         authHandlers: {},
         authType: false,
         cache:false,
-        //timeout:0, ??
-//        successInterceptor: false, //bisogna cambiare e gestirlo come endpointbuilder
-//        errorInterceptor: false //bisogna cambiare e gestirlo come endpointbuilder
 
         endpoints: {},
         endpointBuilders: {},
@@ -407,10 +390,18 @@ angular.module('cr.remote', [])
         return request;
     };
 
+    /**
+     * Return config
+     * @return Object
+     */
     this.getConfig = function() {
         return this._config;
     };
 
+    /**
+     * Set configuration
+     * @param Object obj
+     */
     this.setConfig = function(obj) {
         for (var ii in obj) {
             this._config[ii] = obj[ii];
@@ -502,8 +493,8 @@ angular.module('cr.remote', [])
         options = this.getMergedConfig(options);
         var builder = this.getEndpointBuilder(options.endpointBuilder);
         var url = builder(this.getEndpoint(options.endpoint), options.resourceName, options.id);
-        options = this.authorizeRequest(options); 
-//     
+        options = this.authorizeRequest(options);
+
         var d = $q.defer();
         var httpConfig = {
             "url": url,
@@ -511,16 +502,15 @@ angular.module('cr.remote', [])
             "params": options.params,
             "headers": options.headers,
             "cache": options.cache
-//            "transformResponse": options.responseInterceptor
         };
         if(options.data) {
             httpConfig.data = options.data;
         }
-        
+
         if(options.requestInterceptors[options.requestInterceptor]) {
             httpConfig = options.requestInterceptors[options.requestInterceptor](httpConfig);
         }
-        
+
         $http(httpConfig).then(function(data){
             if(options.responseInterceptorSuccesss[options.responseInterceptorSuccess]) {
                 data = options.responseInterceptorSuccesss[options.responseInterceptorSuccess](data);
@@ -608,20 +598,16 @@ angular.module('cr.remote', [])
 			responseInterceptorSuccesss: {},
 			responseInterceptorErrors: {}
 	};
-	
-	
-	
-	
-	
+
 	/**
 	 * Add an endpoint (es http://myrestendpoint.tld/)
 	 * @param String name the endpoint identifier
 	 * @param String endpoint the endpoint
 	 */
 	this.addEndpoint = function(name, endpoint) {
-	    this.getConfig().endpoints[name] = endpoint; 
+	    this.getConfig().endpoints[name] = endpoint;
 	};
-	
+
 	/**
 	 * Get an endpoint by name
 	 * @param String name the endpoint identifier
@@ -630,7 +616,7 @@ angular.module('cr.remote', [])
 	this.getEndpoint = function(name) {
 	    return (getConfig().endpoints[name]) ? getConfig().endpoints[name] : null;
 	};
-	
+
 	/**
 	 * set all endpoints overriding the previous
 	 * @param Object endpoints a list of names and endpoints
@@ -640,7 +626,6 @@ angular.module('cr.remote', [])
 	        this.addEndpoint(iii, endpoints[iii]);
 	    }
 	};
-	
 
     /**
      * Add an endpoint builder function (es http://myrestendpoint.tld/)
@@ -648,9 +633,9 @@ angular.module('cr.remote', [])
      * @param Function builder the function that create the final endpoint for the remote request
      */
 	this.addEndpointBuilder = function(name, builder) {
-	    this.getConfig().endpointBuilders[name] = builder; 
+	    this.getConfig().endpointBuilders[name] = builder;
 	};
-	
+
     /**
      * Get an endpoint by name
      * @param String name the builder identifier
@@ -659,7 +644,7 @@ angular.module('cr.remote', [])
     this.getEndpointBuilder = function(name) {
         return (getConfig().endpointBuilders[name]) ? getConfig().endpointBuilders[name] : null;
     };
-	
+
     /**
      * set all builders overriding the previous
      * @param Object builders a list of names and builder functions
@@ -669,17 +654,16 @@ angular.module('cr.remote', [])
             this.addEndpointBuilder(iii, builders[iii]);
         }
     };
-    
-    
+
     /**
-     * Add an interceptor for request  
+     * Add an interceptor for request
      * @param String name the interceptor identifier
      * @param Function interceptor the interceptor
      */
     this.addRequestInterceptor = function(name, interceptor) {
-        this.getConfig().requestInterceptors[name] = interceptor; 
+        this.getConfig().requestInterceptors[name] = interceptor;
     };
-    
+
     /**
      * Get an interceptor for request  by name
      * @param String name the interceptor identifier
@@ -688,9 +672,9 @@ angular.module('cr.remote', [])
     this.getRequestInterceptor = function(name) {
         return (getConfig().requestInterceptors[name]) ? getConfig().requestInterceptors[name] : function(data) {return data;};
     };
-    
+
     /**
-     * set all interceptors for request 
+     * set all interceptors for request
      * @param Object intercpetors a list of names and intercpetor functions
      */
     this.setRequestInterceptors = function(interceptors) {
@@ -698,16 +682,16 @@ angular.module('cr.remote', [])
             this.addRequestInterceptor(iii, interceptors[iii]);
         }
     };
-    
+
     /**
-     * Add an interceptor for response success 
+     * Add an interceptor for response success
      * @param String name the interceptor identifier
      * @param Function interceptor the interceptor
      */
     this.addResponseInterceptorSuccess = function(name, interceptor) {
-        this.getConfig().responseInterceptorSuccesss[name] = interceptor; 
+        this.getConfig().responseInterceptorSuccesss[name] = interceptor;
     };
-    
+
     /**
      * Get an interceptor for response success by name
      * @param String name the interceptor identifier
@@ -716,7 +700,7 @@ angular.module('cr.remote', [])
     this.getResponseInterceptorSuccess = function(name) {
         return (getConfig().responseInterceptorSuccesss[name]) ? getConfig().responseInterceptorSuccesss[name] : function(data) {return data;};
     };
-    
+
     /**
      * set all interceptors for response success
      * @param Object intercpetors a list of names and intercpetor functions
@@ -726,18 +710,16 @@ angular.module('cr.remote', [])
             this.addResponseInterceptorSuccess(iii, interceptors[iii]);
         }
     };
-    
-    
-    
+
     /**
-     * Add an interceptor for response error 
+     * Add an interceptor for response error
      * @param String name the interceptor identifier
      * @param Function interceptor the interceptor
      */
     this.addResponseInterceptorError = function(name, interceptor) {
-        this.getConfig().responseInterceptorErrors[name] = interceptor; 
+        this.getConfig().responseInterceptorErrors[name] = interceptor;
     };
-    
+
     /**
      * Get an interceptor for response error by name
      * @param String name the interceptor identifier
@@ -746,7 +728,7 @@ angular.module('cr.remote', [])
     this.getResponseInterceptorError = function(name) {
         return (getConfig().responseInterceptorErrors[name]) ? getConfig().responseInterceptorErrors[name] : function(data) {return data;};
     };
-    
+
     /**
      * set all interceptors for response error
      * @param Object intercpetors a list of names and intercpetor functions
@@ -756,54 +738,7 @@ angular.module('cr.remote', [])
             this.addResponseInterceptorError(iii, interceptors[iii]);
         }
     };
-    
-    
-    
-    
-    
-    
-    
-	/**
-	 * Build your endpoint
-	 * @param   buildFunction function Callback to create endpoint url
-	 * @param   buildType     function Name of endpoint
-	 
-	this.setEndpointBuilder = function(buildFunction, buildType) {
-		if(!buildType) {
-			buildType = "default";
-		}
-		this.getConfig().endpointBuilders[buildType] = buildFunction;
-	};
-	
-	
-	/**
-	 * Set new endpoint
-	 * @param endpoint String endpoint url
-	 * @param endpointType String name of endpoint
-	 
-	this.setEndpoint = function (endpoint, endpointType) {
-		if(!endpointType) {
-			endpointType = "default";
-		}
-		this.getConfig().endpoints[endpointType] = endpoint;
-	};
-	
 
-
-    /**
-     * Set new endpoint
-     * @param endpoint String endpoint url
-     * @param endpointType String name of endpoint
-     
-    this.setResponseInterceptor = function (interceptor, interceptorType) {
-        if(!interceptorType) {
-            interceptorType = "default";
-        }
-        this.getConfig().responseInterceptor = interceptor;
-    };
-    */
-	
-	
 	/**
 	 * Return config
 	 * @return Object
@@ -811,11 +746,9 @@ angular.module('cr.remote', [])
 	this.getConfig = function() {
 		return _config;
 	};
-	
+
 	this.$get = function() {
 	    return this.getConfig();
-		//crRemoteService.setConfig(this.getConfig());
-		//return crRemoteService;
 	};
 })
 .provider('crRemoteCognito', function() {
@@ -836,7 +769,6 @@ angular.module('cr.remote', [])
         this.getConfig().endpointBuilders[buildType] = buildFunction;
     };
 
-
     /**
      * Set new endpoint
      * @param endpoint String endpoint url
@@ -848,11 +780,6 @@ angular.module('cr.remote', [])
         }
         this.getConfig().endpoints[endpointType] = endpoint;
     };
-    
-    
-    
-    
-    
 
     /**
      * Return config
