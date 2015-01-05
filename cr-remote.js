@@ -1,19 +1,170 @@
 angular.module('cr.remote', [])
-.service('crRemoteCognitoSync', ['crAws', '$q',  function(crAws, $q) {
+.service('crRemoteDynamo', ['crRemote', 'crAws', '$q',  function(crRemote, crAws, $q) {
 	this._config = {
+
         id: false,
         params: false,
         resourceName: "",
         endpoint: "default",
         endpointBuilder: "default",
+        requestInterceptor: "default",
+        responseInterceptorSuccess:  "default",
+        responseInterceptorError:  "default",
+        
         headers: {},
         authHandlers: {},
-        authType: false
+        authType: false,
+        cache:false,
+
+        endpoints: {},
+        endpointBuilders: {},
+        requestInterceptors: {},
+        responseInterceptorSuccesss: {},
+        responseInterceptorErrors: {}
 	};
 	
-    this.createService = function(options) {
+	 /**
+     * Create service
+     * @param options Object init configuration
+     */
+    this.createService = function(resourceName, options) {
         var service = angular.copy(this);
-        service._config = service.getMergedConfig(options);
+        service._config = service.getMergedConfig(crRemote);
+        if(options) {
+        	service._config = service.getMergedConfig(options);
+        }
+        service._config.resourceName = resourceName;
+        return service;
+    };
+    
+    /**
+     * Merge configuration
+     * @param options Object your configuration
+     * @return Object
+     */
+    this.getMergedConfig = function(options) {
+        var results = angular.copy(this.getConfig());
+        for(var iii in options) {
+            if(results[iii] !== null) {
+                results[iii] = options[iii];
+            }
+        }
+        return results;
+    };
+
+    /**
+     * Get entry point
+     * @param options Object Call configuration
+     * @return $q
+     */
+    this['get'] = function(options) {
+    	if(!options) {
+    		options = {};
+    	}
+        options.method = "GET";
+        return this._call(options);
+    };
+    
+    /**
+     * Post entry point
+     * @param options Object Call configuration
+     * @return $q
+     */
+    this['post'] = function(options) {
+    	if(!options) {
+    		options = {};
+    	}
+        options.method = "POST";
+        return this._call(options);
+    };
+
+    /**
+     * Wrap of $http
+     * @param options Object Call configuration
+     * @return $http
+     */
+    this._call = function(options) {
+    	options = this.getMergedConfig(options);
+    	var d = $q.defer();
+    	var dynamo = crAws.cognito.getDynamo(options.resourceName);
+    	
+        if(options.requestInterceptors[options.requestInterceptor]) {
+            options = options.requestInterceptors[options.requestInterceptor](options);
+        }
+        console.log("sono in dynamo e sto chiamando..", options);
+        
+
+        dynamo.then(function(dynamoObj) {
+	        if(options.method == "GET") {
+	        	dynamoObj.get(options.id).then(function(data){
+	                if(options.responseInterceptorSuccesss[options.responseInterceptorSuccess]) {
+	                    data = options.responseInterceptorSuccesss[options.responseInterceptorSuccess](data);
+	                }
+	                d.resolve(data);
+	        	},function(data){
+	                if(options.responseInterceptorErrors[options.responseInterceptorError]) {
+	                    data = options.responseInterceptorErrors[options.responseInterceptorError](data);
+	                }
+	                d.reject(data);
+	            });
+	        }
+        });
+        
+//        d.resolve({});
+        
+        return d.promise;
+        
+        
+        
+    };
+    this.getConfig = function() {
+        return this._config;
+    };
+
+    this.setConfig = function(obj) {
+        for (var ii in obj) {
+            this._config[ii] = obj[ii];
+        }
+    };
+    
+	
+	
+}])
+.service('crRemoteCognitoSync', ['crRemote', 'crAws', '$q',  function(crRemote, crAws, $q) {
+	this._config = {
+
+        id: false,
+        params: false,
+        resourceName: "",
+        endpoint: "default",
+        endpointBuilder: "default",
+        requestInterceptor: "default",
+        responseInterceptorSuccess:  "default",
+        responseInterceptorError:  "default",
+        
+        headers: {},
+        authHandlers: {},
+        authType: false,
+        cache:false,
+
+        endpoints: {},
+        endpointBuilders: {},
+        requestInterceptors: {},
+        responseInterceptorSuccesss: {},
+        responseInterceptorErrors: {}
+	};
+	
+    /**
+     * Create service
+     * @param options Object init configuration
+     */
+    this.createService = function(resourceName, options) {
+        var service = angular.copy(this);
+        service._config = service.getMergedConfig(crRemote);
+        if(options) {
+        	service._config = service.getMergedConfig(options);
+        }
+        service._config.resourceName = resourceName;
         return service;
     };
 
@@ -24,20 +175,56 @@ angular.module('cr.remote', [])
      */
     this._call = function(options) {
     	options = this.getMergedConfig(options);
-    	var s = $q.defer();
+    	var d = $q.defer();
     	var sync = crAws.cognito.getSync(options.resourceName);
+    	
+        if(options.requestInterceptors[options.requestInterceptor]) {
+            options = options.requestInterceptors[options.requestInterceptor](options);
+        }
+    	
     	sync.then(function(syncObj) {
 	        if(options.method == "GET") {
-	        	s.resolve(syncObj.get(options.id));
+	        	syncObj.get(options.id).then(function(data){
+	                if(options.responseInterceptorSuccesss[options.responseInterceptorSuccess]) {
+	                    data = options.responseInterceptorSuccesss[options.responseInterceptorSuccess](data);
+	                }
+	                d.resolve(data);
+	        	},function(data){
+	                if(options.responseInterceptorErrors[options.responseInterceptorError]) {
+	                    data = options.responseInterceptorErrors[options.responseInterceptorError](data);
+	                }
+	                d.reject(data);
+	            });
 	        }
 	        if(options.method == "POST" || options.method == "PUT" || options.method == "PATCH") {
-	            s.resolve(syncObj.set(options.id, options.data));
+	            syncObj.set(options.id, options.data).then(function(data){
+	                if(options.responseInterceptorSuccesss[options.responseInterceptorSuccess]) {
+	                    data = options.responseInterceptorSuccesss[options.responseInterceptorSuccess](data);
+	                }
+	                d.resolve(data);
+	        	},function(data){
+	                if(options.responseInterceptorErrors[options.responseInterceptorError]) {
+	                    data = options.responseInterceptorErrors[options.responseInterceptorError](data);
+	                }
+	                d.reject(data);
+	            });
 	        }
 	        if(options.method == "DELETE") {
-	        	s.resolve(syncObj.remove(options.id));
+	        	syncObj.remove(options.id).then(function(data){
+	                if(options.responseInterceptorSuccesss[options.responseInterceptorSuccess]) {
+	                    data = options.responseInterceptorSuccesss[options.responseInterceptorSuccess](data);
+	                }
+	                d.resolve(data);
+	        	},function(data){
+	                if(options.responseInterceptorErrors[options.responseInterceptorError]) {
+	                    data = options.responseInterceptorErrors[options.responseInterceptorError](data);
+	                }
+	                d.reject(data);
+	            });
 	        }
     	});
-        return s.promise;
+    	
+        return d.promise;
     };
     
 
@@ -58,7 +245,7 @@ angular.module('cr.remote', [])
 
     /**
      * Get entry point
-     * @param options Object Call configuation
+     * @param options Object Call configuration
      * @return $q
      */
     this['get'] = function(options) {
@@ -68,10 +255,11 @@ angular.module('cr.remote', [])
         options.method = "GET";
         return this._call(options);
     };
+   
 
     /**
      * Delete entry point
-     * @param options Object Call configuation
+     * @param options Object Call configuration
      * @return $q
      */
     this['delete'] = function(options) {
@@ -84,7 +272,7 @@ angular.module('cr.remote', [])
 
     /**
      * Post entry point
-     * @param options Object Call configuation
+     * @param options Object Call configuration
      * @return $q
      */
     this['post'] = function(options) {
@@ -97,7 +285,7 @@ angular.module('cr.remote', [])
 
     /**
      * Put entry point
-     * @param options Object Call configuation
+     * @param options Object Call configuration
      * @return $q
      */
     this['put'] = function(options) {
@@ -110,7 +298,7 @@ angular.module('cr.remote', [])
 
     /**
      * Patch entry point
-     * @param options Object Call configuation
+     * @param options Object Call configuration
      * @return $q
      */
     this['patch'] = function(options) {
@@ -167,11 +355,13 @@ angular.module('cr.remote', [])
      * Create service
      * @param options Object init configuration
      */
-    this.createService = function(options) {
+    this.createService = function(resourceName, options) {
         var service = angular.copy(this);
-        
         service._config = service.getMergedConfig(crRemote);
-        service._config = service.getMergedConfig(options);
+        if(options) {
+        	service._config = service.getMergedConfig(options);
+        }
+        service._config.resourceName = resourceName;
         return service;
     };
 
@@ -305,7 +495,7 @@ angular.module('cr.remote', [])
 
     /**
      * Wrap of $http
-     * @param options Object Call configuation
+     * @param options Object Call configuration
      * @return $http
      */
     this._call = function(options) {
@@ -347,7 +537,7 @@ angular.module('cr.remote', [])
 
     /**
      * Get entry point
-     * @param options Object Call configuation
+     * @param options Object Call configuration
      * @return $q
      */
     this['get'] = function(options) {
@@ -360,7 +550,7 @@ angular.module('cr.remote', [])
 
     /**
      * Delete entry point
-     * @param options Object Call configuation
+     * @param options Object Call configuration
      * @return $q
      */
     this['delete'] = function(options) {
@@ -373,7 +563,7 @@ angular.module('cr.remote', [])
 
     /**
      * Post entry point
-     * @param options Object Call configuation
+     * @param options Object Call configuration
      * @return $q
      */
     this['post'] = function(options) {
@@ -386,7 +576,7 @@ angular.module('cr.remote', [])
 
     /**
      * Put entry point
-     * @param options Object Call configuation
+     * @param options Object Call configuration
      * @return $q
      */
     this['put'] = function(options) {
@@ -399,7 +589,7 @@ angular.module('cr.remote', [])
 
     /**
      * Patch entry point
-     * @param options Object Call configuation
+     * @param options Object Call configuration
      * @return $q
      */
     this['patch'] = function(options) {
