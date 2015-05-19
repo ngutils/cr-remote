@@ -14,6 +14,7 @@ angular.module('cr.remote', [])
     authHandlers: {},
     authType: false,
     cache:false,
+    timeout:0,
 
     endpoints: {},
     endpointBuilders: {},
@@ -134,6 +135,7 @@ angular.module('cr.remote', [])
     authHandlers: {},
     authType: false,
     cache:false,
+    timeout:0,
 
     endpoints: {},
     endpointBuilders: {},
@@ -328,6 +330,7 @@ angular.module('cr.remote', [])
     authHandlers: {},
     authType: false,
     cache:false,
+    timeout:0,
 
     endpoints: {},
     endpointBuilders: {},
@@ -505,6 +508,7 @@ angular.module('cr.remote', [])
       "params": options.params,
       "headers": options.headers,
       "cache": options.cache,
+      "timeout": options.timeout,
       "callName": options.callName
     };
     if(options.data) {
