@@ -1,89 +1,217 @@
 # crRemote
-CrRemote is a wrap of remote service
-* $http
-Todo
-* Dynamo
-* Firebase
-* Custom
+
+CrRemote is a module based on $http to create services that work with restful and remote resources.
+
+## Install
 
 ``` shell
-$. bower install
+$. bower install cr-remote
 ```
+
+```javascript
+angular.module(
+  'ngtest',
+  [
+      'cr.remote'
+  ]
+)
+```
+
 
 ## Configuration
 ```javascript
-angular.module(
-        'ngPolecats',
-        [
-            'cr.remote'
-        ]
-)
 .config(function myAppConfig(crRemoteProvider) {
-    crRemoteProvider.setEndpoint("http://api1.test.it");
 
-    // you can set more endpoint
-    crRemoteProvider.setEndpoint("http://api2.test.it", "name2");
+  //set endpoint
+  crRemoteProvider.setEndpoint("http://api1.test.it");
+
+  //set interceptors
+
+  //request interceptor to edit data befor the call
+  crRemoteProvider.addRequestInterceptor("default", function(data){
+    data.params.session = "mysessionid";
+    return data;
+  });
+
+  //succesful response interceptor
+  crRemoteProvider.addResponseInterceptorSuccess("default", function(data){
+    data.now = new Date();
+    return data;
+  });
+
+  //wrong response interceptor
+  crRemoteProvider.addResponseInterceptorError("default", function(data){
+    console.log("aaaargh!", data);
+    return data;
+  });
+
 })
-.run(function run(crRemote) {
-})
-.controller('AppCtrl', function AppCtrl($scope, $state, $rootScope, crRemote) {
-    crRemote.get({
+```
+
+## Simpe usage
+
+You can user directly crRemote to make http requests.
+
+``` javascript
+.controller('AppCtrl', function AppCtrl($scope, crRemoteHttp) {
+
+    //retrieve product
+    crRemoteHttp.get({
         resourceName: "/product"
-    }).success(function(data){
-        $scope.products = data;
+    }).then(function(res) {
+      console.log(res);
+    }, function(error) {
+      console.log(error);
+    });
+
+    //post a new entry
+    crRemoteHttp.post({
+        id: 22
+        resourceName: "/product",
+        data: {
+          title: 'product',
+          price: 22.5
+        }
+    }).then(function(res) {
+      console.log(res);
+    }, function(error) {
+      console.log(error);
     });
 });
 ```
 
-## Service
-You can create different resource
-```javascript
-angular.module("ngPolecats.remote-service", [])
-.service("UserRest", ['crRemote', function(crRemote) {
-    var user = crRemote.createService();
-    user.check = function(username, password){
-        var opt = {};
-        opt.authType = "default";
-        opt.resourceName = "/login";
-        return user.get(opt);
-    };
-    return user;
-}])
-.service("ProductRest", ['crRemote', function(crRemote) {
-    var product = crRemote.createService({resourceName:"/product"});
-    product.list = function(){
-        return product.get();
-    };
-    return product;
-}]);
+You can use get post put patch and delete methods that return a promise.
+Successful callback **return by default an object** that contains data (body response), headers() (function that return headers) and status (http status code, exp 200);
+
+## Create injeactable modules
+
+The best way is create dedicated module with specific methods for each remote resource.
+
+
+``` javascript
+  //define a new service
+  .service('OrderResource', ['crRemoteHttp', function(crRemoteHttp){
+   var service = crRemoteHttp.createService("order");
+
+   service.changeStatus = function(id, status) {
+     return service.patch({"id": id, data:{"status": status}});
+   };
+
+   return service;
+  }])
+
+  //use in a controller
+  .controller('AppCtrl', function AppCtrl($scope, OrderResource) {
+    OrderResource.changeStatus(123, 'shipped').then(function(res) {
+     console.log(res);
+    }, function(err) {
+     console.log(err);
+    })
+  });
 ```
-## [CrAuth](https://github.com/corley/cr-user) + CrRemote
-You can use CrAuth to manage authentication
+
+## Call options
+When you make a call(get, post, put, patch and delete) with crRemoteHttp or a module created on it you can define different options:
 ```javascript
-angular.module(
-        'ngPolecats',
-        [
-            'cr.remote',
-            'cr.auth',
-        ]
-)
+crRemoteHttp.post({
+  id: 22 // id of resource, that will be used to create the endpoint url (see advanced settings below)
+  resourceName: "/product", // the name of the resource, as the id is used to create the url
+  data: { //data sent to endpoint in the body of call
+    title: 'product',
+    price: 22.5
+  },
+  cache: true //if the client has to cache response, false by default
+  timeout: 5000 //milliseconds or a promise for the timeout, 0 by default (no timeout),
+  params: { //object of Query params (?q=myname)
+    q: 'myname'
+  },
+  headers: { //object of addiction request headers
+    'x-myheader': '123'
+  },
+  auth: true //if false, an eventual Authorization header will be removed for the call; false by default
+})
+
+```
+
+You can use the options also when you **create a module**:
+
+``` javascript
+  //define a new service
+  .service('OrderResource', ['crRemoteHttp', function(crRemoteHttp){
+   var service = crRemoteHttp.createService("order", {
+     auth: true, // all calls by this module will use authorization header
+     endpoint: 'test', // useful if you use different endpoint and you added another endpoint during configuration
+     endpointBuilder: 'anotherbuild' // the function that creat the url of resource, see advanced settings for more info
+   });
+   return service;
+  }])
+```
+
+
+
+## Manage authorization
+We recommend to use [Satelizer](https://github.com/sahat/satellizer) to manage login and authetication. Satellizer adds Authentication header to http calls (and crRemote it's based on $http).
+
+However, you case easily use directly $http to set authorization headers for your calls.
+
+```javascript
+//in a controller or service
+$http.defaults.headers.common['Authorization'] = 'Basic ' + $rootScope.user.authtoken; // it's just an example
+
+OrderResource.get({'id': 22, 'auth': true}); //make a call using the Authorization header
+```
+
+Remember that the **auth options is false by default**, so you have to set it when you make a call or when you define a new service.
+
+
+## Advanced settings
+
+During configuration you can set different endpoints, interceptors and builders that will be used by your service.
+
+
+```javascript
 .config(function myAppConfig(crRemoteProvider) {
-    crRemoteProvider.setEndpoint("http://api.test");
-})
-.run(function run(crAuth, crAuthBasic, crRemote) {
-    crAuth.setAuthHandler(crAuthBasic);
-    crAuth.setSessionHandler(localStorageService);
-    crRemote.setAuthHandler(crAuth);
-})
-.controller('AppCtrl', function AppCtrl($scope, $state, $rootScope, $crRemote) {
-    $scope.login = function(username, password) {
-        crAuth.setIdentity({username: username, password: password});
-        UserRest.check()
-            .success(function(data){
-            })
-            .error(function(data){
-                console.log("d'oh");
-            });
+
+  //set different endpoints
+  crRemoteProvider.setEndpoint("http://production.mydomain.com/api/"); //add as default endpoint
+  crRemoteProvider.setEndpoint("http://dev01.mydomain.com/api/", "test"); //add as default endpoint
+
+
+  //set a new interceptor
+  crRemoteProvider.addResponseInterceptorSuccess("paginator", function(response){
+    //add to response an object with custom values, in this example a simply paginator and counter
+    response.paginator = {
+      total: response.data.length,
+      page: (response.data.length - (response.data.length & 10) ) / 10 + 1
     };
-});
+    return data;
+  });
+
+  /**
+  by default, crRemoteHttp build endpoint in this way: endpoint + resource name + / + id (if set) + query (if set)
+  example https://api.mydomain.com/product/22?status=enabled
+  you can rewrite it:
+  */
+
+  crRemoteProvider.addEndpointBuilder('newbuilder',  function(endpoint, resourceName, resourceId, params) {
+    return endpoint + id + "/" + resourceName; //it will return https://api.mydomain.com/22/product
+  });
+})
+
+
+//define a new service with previous settings
+.service('OrderResource', ['crRemoteHttp', function(crRemoteHttp){
+ var service = crRemoteHttp.createService("order", {
+   endpointBuilder: 'newbuilder',
+   endpoint: 'test',
+   responseInterceptorSuccess: 'paginator'
+ });
+
+ service.changeStatus = function(id, status) {
+   return service.patch({"id": id, data:{"status": status}});
+ };
+
+ return service;
+}])
+
 ```
