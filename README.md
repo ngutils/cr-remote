@@ -1,12 +1,16 @@
 # crRemote
 
-CrRemote is a module based on $http to create services that work with restful and remote resources.
+## Overview
+
+CrRemote is a module based on $http create injectable services that work with restful and remote resources.
 
 ## Install
 
 ``` shell
 $. bower install cr-remote
 ```
+
+then inject it:
 
 ```javascript
 angular.module(
@@ -18,16 +22,16 @@ angular.module(
 ```
 
 
-## Configuration
+## Simple configuration
 ```javascript
 .config(function myAppConfig(crRemoteProvider) {
 
   //set endpoint
-  crRemoteProvider.setEndpoint("http://api1.test.it");
+  crRemoteProvider.setEndpoint("http://api1.your-backend-url.com");
 
   //set interceptors
 
-  //request interceptor to edit data befor the call
+  //request interceptor to edit data before the call
   crRemoteProvider.addRequestInterceptor("default", function(data){
     data.params.session = "mysessionid";
     return data;
@@ -48,9 +52,9 @@ angular.module(
 })
 ```
 
-## Simpe usage
+## Simple usage
 
-You can user directly crRemote to make http requests.
+You can user directly crRemote to make simple http requests:
 
 ``` javascript
 .controller('AppCtrl', function AppCtrl($scope, crRemoteHttp) {
@@ -80,12 +84,12 @@ You can user directly crRemote to make http requests.
 });
 ```
 
-You can use get post put patch and delete methods that return a promise.
-Successful callback **return by default an object** that contains data (body response), headers() (function that return headers) and status (http status code, exp 200);
+Get, post, put, patch and delete methods return a promise.
+Successful callback **returns by default an object** that contains data (body response), headers() (function that return headers) and status (http status code, exp 200). This is the same return of $http calls.
 
-## Create injeactable modules
+## Create services
 
-The best way is create dedicated module with specific methods for each remote resource.
+The best way is create dedicated modules with specific methods for each remote resource.
 
 
 ``` javascript
@@ -102,16 +106,40 @@ The best way is create dedicated module with specific methods for each remote re
 
   //use in a controller
   .controller('AppCtrl', function AppCtrl($scope, OrderResource) {
-    OrderResource.changeStatus(123, 'shipped').then(function(res) {
-     console.log(res);
+    OrderResource.changeStatus(123, 'shipped').then(function(response) {
+     console.log(response);
     }, function(err) {
      console.log(err);
     })
   });
 ```
 
-## Call options
-When you make a call(get, post, put, patch and delete) with crRemoteHttp or a module created on it you can define different options:
+When you create a service, the URI is crafted with this formula:
+
+`endpoint` + `resourceName` + `\` + `id`
+
+So when you make a POST request with id value = 22 on the `OrderResource` service it will call the 'http://endpoint-in-config/order/22' URL.
+
+## Methods (API)
+
+### Options object
+
+The options object that you can pass to methods:
+
+
+key                   | type          | Description
+----------------------| --------------| ----------
+id                    | string/int    | the id used to build the url resource
+data                  | object        | data passed in the body of request
+cache                 | bool          | default false, if true caches the response
+timeout               | int/promise   | the ms of timeout or a promise
+params                | object        | data appendend in queery params
+headers               | object        | addictional headers for the request
+auth                  | bool          | false by default: if false the `Authorization` header is deleted in request
+
+
+For example:
+
 ```javascript
 crRemoteHttp.post({
   id: 22 // id of resource, that will be used to create the endpoint url (see advanced settings below)
@@ -133,24 +161,99 @@ crRemoteHttp.post({
 
 ```
 
-You can use the options also when you **create a module**:
+### .get(options)
 
-``` javascript
-  //define a new service
-  .service('OrderResource', ['crRemoteHttp', function(crRemoteHttp){
-   var service = crRemoteHttp.createService("order", {
-     auth: true, // all calls by this module will use authorization header
-     endpoint: 'test', // useful if you use different endpoint and you added another endpoint during configuration
-     endpointBuilder: 'anotherbuild' // the function that creat the url of resource, see advanced settings for more info
-   });
-   return service;
-  }])
+Make a GET call and returns a promise.
+
+```javascript
+//MyService is a crRemote service on 'example' resource
+
+//GET http://myendpoint/example/22
+MyService.get({'id': 22}).then(function(response) {
+  console.log(response);
+}, function(error) {
+  console.log(error);  
+});
+```
+
+Search with query params:
+
+
+```javascript
+//MyService is a crRemote service on 'example' resource
+
+//GET http://myendpoint/example/?q=searchkey with 5 seconds timeout
+MyService.get({'params': {'q': 'searchkey'}, 'timeout': 5000}).then(function(response) {
+  console.log(response);
+}, function(error) {
+  console.log(error);  
+});
+```
+
+
+### .post(options)
+
+Make a POST call and returns a promise.
+
+```javascript
+//MyService is a crRemote service on 'example' resource
+
+//POST {'amount': 1000} with no deleting authorization header to http://myendpoint/example/22
+MyService.post({'id': 22, 'data': {'amount': 1000}, 'auth': true}).then(function(response) {
+  console.log(response);
+}, function(error) {
+  console.log(error);  
+});
+```
+
+### .put(options)
+
+Make a PUT call and returns a promise.
+
+```javascript
+//MyService is a crRemote service on 'example' resource
+
+//PUT {'amount': 1000} with no deleting authorization header to http://myendpoint/example/22
+MyService.put({'id': 22, 'data': {'amount': 1000}, 'auth': true}).then(function(response) {
+  console.log(response);
+}, function(error) {
+  console.log(error);  
+});
+```
+### .patch(options)
+
+Make a PATCH call and returns a promise.
+
+```javascript
+//MyService is a crRemote service on 'example' resource
+
+//PATCH {'amount': 2000} with no deleting authorization header to http://myendpoint/example/22
+MyService.put({'id': 22, 'data': {'amount': 200}, 'auth': true}).then(function(response) {
+  console.log(response);
+}, function(error) {
+  console.log(error);  
+});
+```
+
+### .delete(options)
+
+Make a DELETE call and returns a promise.
+
+```javascript
+//MyService is a crRemote service on 'example' resource
+
+//DELETE http://myendpoint/example/22
+MyService.delete({'id': 22}).then(function(response) {
+  console.log(response);
+}, function(error) {
+  console.log(error);  
+});
 ```
 
 
 
 ## Manage authorization
-We recommend to use [Satelizer](https://github.com/sahat/satellizer) to manage login and authetication. Satellizer adds Authentication header to http calls (and crRemote it's based on $http).
+We recommend to use [Satellizer](https://github.com/sahat/satellizer) to manage login and authetication. Satellizer adds Authentication header to http calls (and crRemote it's based on $http).
 
 However, you case easily use directly $http to set authorization headers for your calls.
 
