@@ -10,6 +10,12 @@ CrRemote is a module based on $http create injectable services that work with re
 $. bower install cr-remote
 ```
 
+add to your html:
+
+```html
+<script src="bower_components/cr-remote/cr-remote.js"></script>
+```
+
 then inject it:
 
 ```javascript
